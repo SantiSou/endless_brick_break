@@ -34,7 +34,7 @@ speed_factor = 1
 players = Group()
 player_x = 0
 player_y = 0
-player_width = 45
+player_width = 70
 player_height = 3
 
 balls = Group()
@@ -52,66 +52,110 @@ class Player(Sprite):
         self.screen = screen
         self.screen_rect = screen.get_rect()
 
-        self.player_rect = pygame.Rect(
+        self.rect = pygame.Rect(
             player_x, player_y, player_width, player_height)
 
     def draw_player(self):
 
-        pygame.draw.rect(self.screen, (0, 0, 0), self.player_rect)
+        pygame.draw.rect(self.screen, (0, 0, 0), self.rect)
 
     def update(self, mouse_x):
 
-        self.player_rect.centerx = mouse_x
-        self.player_rect.centery = 500
+        self.rect.centerx = mouse_x
+        self.rect.centery = 500
 
         for player in players.sprites():
+
+            collision_bricks = pygame.sprite.spritecollide(player,bricks,False)
+
+            # if collision_bricks:
+            #     print('Has perdido')
             player.draw_player()
 
 
 class Ball(Sprite):
 
-    def __init__(self, screen, new_player):
+    def __init__(self, screen, new_player, bricks):
 
         super(Ball, self).__init__()
         self.screen = screen
         self.screen_rect = screen.get_rect()
 
-        self.ball_rect = pygame.Rect(ball_x, ball_y, ball_width, ball_height)
+        self.rect = pygame.Rect(ball_x, ball_y, ball_width, ball_height)
 
-        self.ball_rect.centery = new_player.player_rect.centery
-        self.ball_rect.centerx = new_player.player_rect.centerx
+        self.rect.centery = new_player.rect.centery
+        self.rect.centerx = new_player.rect.centerx
 
-        self.direction_x = random.randint(0, 1)
-        self.direction_y = random.randint(0, 1)
+        self.direction_x = random.randint(0,1)
+        self.direction_y = 0
 
     def draw_ball(self):
 
-        pygame.draw.rect(self.screen, (0, 0, 0), self.ball_rect)
+        pygame.draw.rect(self.screen, (0, 0, 0), self.rect)
 
     def update(self):
 
-        if self.ball_rect.centery <= 0:
-            self.direction_y = 1
-        elif self.ball_rect.centery >= screen_height:
-            self.direction_y = 0
+        if self.rect.centery <= 0:
+            self.direction_y = 1 # True para que se desplaze hacia abajo        
+        elif self.rect.centery >= screen_height:
+            self.direction_y = 0 # False para que se desplaze hacia arriba 
 
-        if self.ball_rect.centerx <= 0:
-            self.direction_x = 1
-        elif self.ball_rect.centerx >= screen_width:
-            self.direction_x = 0
+        if self.rect.centerx <= 0:
+            self.direction_x = 1 # True para que se desplaze hacia la derecha
+        elif self.rect.centerx >= screen_width:
+            self.direction_x = 0 # False para que se desplaze hacia la izquierda 
+
+        for ball in balls.sprites():
+
+            collision_bricks = pygame.sprite.spritecollide(ball,bricks,True)
+            collision_player = pygame.sprite.spritecollide(ball,players,False)
+
+            if collision_bricks:
+                
+                if self.direction_y and self.direction_x: # Abajo/Derecha
+
+                    if (self.rect.bottomright[0] - collision_bricks[0].rect.topleft[0]) > (self.rect.bottomright[1] - collision_bricks[0].rect.topleft[1]):
+                        self.direction_y = 0
+                    else:
+                        self.direction_x = 0
+
+                elif not self.direction_y and self.direction_x: # Arriba/Derecha
+
+                    if (self.rect.topright[0] - collision_bricks[0].rect.bottomleft[0]) > (collision_bricks[0].rect.bottomleft[1] - self.rect.topright[1]):
+                        self.direction_y = 1
+                    else:                     
+                        self.direction_x = 0
+
+                elif not self.direction_y and not self.direction_x: # Arriba/Izquierda
+
+                    if (collision_bricks[0].rect.bottomright[0] - self.rect.topleft[0]) > (collision_bricks[0].rect.bottomright[1] - self.rect.topleft[1]):
+                        self.direction_y = 1
+                    else:
+                        self.direction_x = 1
+
+                elif self.direction_y and not self.direction_x: # Abajo/Izquierda
+
+                    if (collision_bricks[0].rect.topright[0] - self.rect.bottomleft[0]) > (self.rect.bottomleft[1] - collision_bricks[0].rect.topright[1]):
+                        self.direction_y = 0
+                    else:
+                        self.direction_x = 1
+
+            if collision_player:
+                self.direction_y = 0
+
 
         if self.direction_y and self.direction_x:
-            self.ball_rect.centery += speed_factor + 2
-            self.ball_rect.centerx += speed_factor + 2
+            self.rect.centery += speed_factor + 2
+            self.rect.centerx += speed_factor + 2
         elif self.direction_y and not self.direction_x:
-            self.ball_rect.centery += speed_factor + 2
-            self.ball_rect.centerx -= speed_factor + 2
+            self.rect.centery += speed_factor + 2
+            self.rect.centerx -= speed_factor + 2
         elif not self.direction_y and self.direction_x:
-            self.ball_rect.centery -= speed_factor + 2
-            self.ball_rect.centerx += speed_factor + 2
+            self.rect.centery -= speed_factor + 2
+            self.rect.centerx += speed_factor + 2
         elif not self.direction_y and not self.direction_x:
-            self.ball_rect.centery -= speed_factor + 2
-            self.ball_rect.centerx -= speed_factor + 2
+            self.rect.centery -= speed_factor + 2
+            self.rect.centerx -= speed_factor + 2
 
         for ball in balls.sprites():
             if len(balls) == 1:
@@ -128,20 +172,19 @@ class Brick(Sprite):
         self.screen = screen
         self.screen_rect = screen.get_rect()
 
-        self.brick_rect = pygame.Rect(
+        self.rect = pygame.Rect(
             brick_x, brick_y, brick_width, brick_height)
 
     def draw_brick(self):
 
-        pygame.draw.rect(self.screen, (0, 0, 0), self.brick_rect)
+        pygame.draw.rect(self.screen, (0, 0, 0), self.rect)
 
     def update(self, speed_factor):
 
-        self.brick_rect.centery += speed_factor
+        self.rect.centery += speed_factor
 
         for brick in bricks.sprites():
-
-            if brick.brick_rect.bottom >= screen_height:
+            if brick.rect.bottom >= screen_height:
                 bricks.remove(brick)
 
             brick.draw_brick()
@@ -161,10 +204,10 @@ while True:
             sys.exit()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Botón izquierdo del ratón
-                new_ball = Ball(screen, new_player)
+                new_ball = Ball(screen, new_player, bricks)
                 balls.add(new_ball)
 
-    if 1 == random.randint(1, 100):
+    if 1 == random.randint(1,50):
         new_brick = Brick(screen)
         bricks.add(new_brick)
 
